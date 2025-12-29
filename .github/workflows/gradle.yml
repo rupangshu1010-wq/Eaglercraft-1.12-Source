@@ -19,40 +19,24 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
 
-      - name: 3. Grant Execute Permissions
+      - name: 3. Grant Execute
         run: chmod +x gradlew
 
       - name: 4. Run Conversion
-        # Using the exact command from your build.gradle
-        run: ./gradlew clean teavmCompileJs --no-daemon
+        # This will try 'generateJavaScript' which is the default for org.teavm 0.9.2
+        run: ./gradlew clean generateJavaScript --no-daemon
 
-      - name: 5. Collect Finished Files
+      - name: 5. Collect Files
         run: |
           mkdir -p deploy
-          echo "Scanning for compiled files..."
-          
-          # Copy the JS file from the directory defined in your build.gradle
-          # Note: your gradle says: outputDir = file("javascript")
-          cp javascript/classes.js deploy/ || find . -name "classes.js" -exec cp {} deploy/ \;
-          
-          # Find and copy assets and html
+          # Search for the output file mentioned in your build.gradle (targetFileName = "../classes.js")
+          find . -name "classes.js" -exec cp {} deploy/ \;
           find . -name "assets.epk" -exec cp {} deploy/ \;
-          cp index.html deploy/ 2>/dev/null || cp javascript/index.html deploy/ 2>/dev/null || true
-          
-          # List files to make sure we got them
-          ls -R deploy
+          cp index.html deploy/ 2>/dev/null || true
 
       - name: 6. Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Eaglercraft_Web_Files
           path: deploy/
-          if-no-files-found: error
-
-      - name: 7. Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: deploy
-          branch: gh-pages
