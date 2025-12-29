@@ -1,14 +1,14 @@
-name: Build Eaglercraft 1.12 Web
-on: 
+name: Build Eaglercraft Web
+on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
   build-web:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -16,39 +16,22 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
 
-      - name: Grant Execute Permissions
+      - name: Grant Execute
         run: chmod +x gradlew
 
-      - name: Build Web Files
-        # We run 'teavm' specifically if available, otherwise standard build
+      - name: Build Web
         run: ./gradlew clean build --no-daemon
 
-      - name: Locate and Collect Files
-        # This part is smart: it searches for classes.js and moves it to 'deploy'
+      - name: Collect Files
         run: |
           mkdir -p deploy
-          echo "Searching for compiled files..."
-          # Find classes.js and assets.epk regardless of where Gradle put them
-          find build -name "classes.js" -exec cp {} deploy/ \;
-          find build -name "assets.epk" -exec cp {} deploy/ \;
-          
-          # Also copy any HTML files from the root or javascript folders
+          find . -name "classes.js" -exec cp {} deploy/ \;
+          find . -name "assets.epk" -exec cp {} deploy/ \;
           cp index.html deploy/ 2>/dev/null || true
-          cp -r javascript/* deploy/ 2>/dev/null || true
-          
-          echo "Files collected in deploy folder:"
-          ls -R deploy
 
-      - name: Upload Finished Web Files
+      - name: Upload Build
         uses: actions/upload-artifact@v4
         with:
-          name: Eaglercraft_1.12_Web_Build
+          name: Eaglercraft_Files
           path: deploy/
-          if-no-files-found: error
-        uses: actions/upload-artifact@v4
-        with:
-          name: Eaglercraft_1.12_Web_Build
-          path: deploy/
-          retention-days: 5
