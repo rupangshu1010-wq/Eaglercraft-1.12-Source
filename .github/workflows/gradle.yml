@@ -2,7 +2,7 @@ name: Build Eaglercraft 1.12 Web
 on: 
   push:
     branches: [ main, master ]
-  workflow_dispatch: # Allows you to run this manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
   build-web:
@@ -21,20 +21,32 @@ jobs:
       - name: Grant Execute Permissions
         run: chmod +x gradlew
 
-      - name: Build Web Files (TeaVM)
-        # We use 'teavm' or 'build' depending on the specific fork structure
-        # 'clean' ensures we don't have old data cached
+      - name: Build Web Files
+        # We run 'teavm' specifically if available, otherwise standard build
         run: ./gradlew clean build --no-daemon
 
-      - name: Prepare Workspace for Download
-        # This step moves the files into a single folder for easy downloading
+      - name: Locate and Collect Files
+        # This part is smart: it searches for classes.js and moves it to 'deploy'
         run: |
           mkdir -p deploy
-          cp -r build/teavm/dist/* deploy/ || true
-          cp -r javascript/* deploy/ || true
-          cp index.html deploy/ || true
+          echo "Searching for compiled files..."
+          # Find classes.js and assets.epk regardless of where Gradle put them
+          find build -name "classes.js" -exec cp {} deploy/ \;
+          find build -name "assets.epk" -exec cp {} deploy/ \;
+          
+          # Also copy any HTML files from the root or javascript folders
+          cp index.html deploy/ 2>/dev/null || true
+          cp -r javascript/* deploy/ 2>/dev/null || true
+          
+          echo "Files collected in deploy folder:"
+          ls -R deploy
 
       - name: Upload Finished Web Files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eaglercraft_1.12_Web_Build
+          path: deploy/
+          if-no-files-found: error
         uses: actions/upload-artifact@v4
         with:
           name: Eaglercraft_1.12_Web_Build
