@@ -11,45 +11,47 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: 1. Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: 2. Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'gradle'
 
-      - name: Grant Execute
+      - name: 3. Grant Execute Permissions
         run: chmod +x gradlew
 
-      - name: Build Web (TeaVM)
-        # This command specifically tells Gradle to convert Java to JavaScript
-        run: ./gradlew clean teavmWeb --no-daemon || ./gradlew clean build --no-daemon
+      - name: 4. Run Conversion
+        # Using the exact command from your build.gradle
+        run: ./gradlew clean teavmCompileJs --no-daemon
 
-      - name: Collect Files
+      - name: 5. Collect Finished Files
         run: |
           mkdir -p deploy
-          echo "Scanning for web files..."
-          # Specifically search for the output of TeaVM
-          find . -type f -name "classes.js" -exec cp {} deploy/ \;
-          find . -type f -name "assets.epk" -exec cp {} deploy/ \;
+          echo "Scanning for compiled files..."
           
-          # Copy HTML and CSS from common locations
-          cp index.html deploy/ 2>/dev/null || true
-          cp -r javascript/* deploy/ 2>/dev/null || true
+          # Copy the JS file from the directory defined in your build.gradle
+          # Note: your gradle says: outputDir = file("javascript")
+          cp javascript/classes.js deploy/ || find . -name "classes.js" -exec cp {} deploy/ \;
           
-          # List files to verify they exist before uploading
+          # Find and copy assets and html
+          find . -name "assets.epk" -exec cp {} deploy/ \;
+          cp index.html deploy/ 2>/dev/null || cp javascript/index.html deploy/ 2>/dev/null || true
+          
+          # List files to make sure we got them
           ls -R deploy
 
-      - name: Upload Artifacts
+      - name: 6. Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Eaglercraft_Web_Files
           path: deploy/
           if-no-files-found: error
 
-      - name: Deploy to GitHub Pages
+      - name: 7. Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: deploy
