@@ -24,6 +24,8 @@ jobs:
         with:
           name: Eaglercraft-Web-Files
           path: |
-            build/distributions
-            gateway/build
-            javascript/out
+            **/*.js
+            **/*.epk
+            **/*.html
+            !**/node_modules/**
+            !**/.gradle/**
