@@ -1,31 +1,42 @@
-name: Build Eaglercraft Web
-on: [workflow_dispatch, push]
+name: Build Eaglercraft 1.12 Web
+on: 
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows you to run this manually from the Actions tab
 
 jobs:
-  build:
+  build-web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          
-      - name: Grant execute permission for gradlew
+          cache: 'gradle'
+
+      - name: Grant Execute Permissions
         run: chmod +x gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew teavm
-        
-      - name: Upload Artifacts
+      - name: Build Web Files (TeaVM)
+        # We use 'teavm' or 'build' depending on the specific fork structure
+        # 'clean' ensures we don't have old data cached
+        run: ./gradlew clean build --no-daemon
+
+      - name: Prepare Workspace for Download
+        # This step moves the files into a single folder for easy downloading
+        run: |
+          mkdir -p deploy
+          cp -r build/teavm/dist/* deploy/ || true
+          cp -r javascript/* deploy/ || true
+          cp index.html deploy/ || true
+
+      - name: Upload Finished Web Files
         uses: actions/upload-artifact@v4
         with:
-          name: Eaglercraft-Web-Files
-          path: |
-            **/*.js
-            **/*.epk
-            **/*.html
-            !**/node_modules/**
-            !**/.gradle/**
+          name: Eaglercraft_1.12_Web_Build
+          path: deploy/
+          retention-days: 5
