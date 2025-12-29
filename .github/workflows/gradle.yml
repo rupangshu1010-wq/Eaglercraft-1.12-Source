@@ -1,11 +1,14 @@
-name: Build Eaglercraft Web
+name: Build and Deploy Eaglercraft Web
 on:
   push:
     branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-web:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -20,18 +23,34 @@ jobs:
       - name: Grant Execute
         run: chmod +x gradlew
 
-      - name: Build Web
-        run: ./gradlew clean build --no-daemon
+      - name: Build Web (TeaVM)
+        # This command specifically tells Gradle to convert Java to JavaScript
+        run: ./gradlew clean teavmWeb --no-daemon || ./gradlew clean build --no-daemon
 
       - name: Collect Files
         run: |
           mkdir -p deploy
-          find . -name "classes.js" -exec cp {} deploy/ \;
-          find . -name "assets.epk" -exec cp {} deploy/ \;
+          echo "Scanning for web files..."
+          # Specifically search for the output of TeaVM
+          find . -type f -name "classes.js" -exec cp {} deploy/ \;
+          find . -type f -name "assets.epk" -exec cp {} deploy/ \;
+          
+          # Copy HTML and CSS from common locations
           cp index.html deploy/ 2>/dev/null || true
+          cp -r javascript/* deploy/ 2>/dev/null || true
+          
+          # List files to verify they exist before uploading
+          ls -R deploy
 
-      - name: Upload Build
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Eaglercraft_Files
+          name: Eaglercraft_Web_Files
           path: deploy/
+          if-no-files-found: error
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: deploy
+          branch: gh-pages
